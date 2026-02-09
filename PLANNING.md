@@ -223,7 +223,7 @@ The following decisions have alternatives. Each needs a resolution before or dur
 - [ ] Set up Firebase initialization (`src/firebase.ts`) with config from `.env`
 - [ ] Set up VueFire plugin in Vue app entry point
 - [ ] Configure `.env` / `.env.local` for Firebase config values (keep out of git)
-- [ ] Update `.gitignore` (node_modules, dist, .env.local, Firebase cache, etc.)
+- [x] Update `.gitignore` (node_modules, dist, .env.local, Firebase cache, etc.)
 
 #### 0.3 — Firebase Cloud Functions Setup
 
@@ -266,8 +266,8 @@ The following decisions have alternatives. Each needs a resolution before or dur
 
 #### 0.7 — GitHub Repo & CI/CD
 
-- [ ] Create a GitHub repo (personal account)
-- [ ] Push initial codebase
+- [x] Create a GitHub repo (personal account) — https://github.com/aenon/excalibur
+- [x] Push initial codebase
 - [ ] Set up **GitHub Actions** workflow:
   - On push to `main`: build Vue app → `firebase deploy` (Hosting + Functions + Firestore rules)
   - On PR: build Vue app → deploy to Firebase **preview channel** (temporary URL)

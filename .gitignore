@@ -35,6 +35,9 @@ emulator-data/
 .continue/
 .copilot/
 
+# Development context (conversation notes, not for repo)
+.context.md
+
 # OS
 .DS_Store
 Thumbs.db
