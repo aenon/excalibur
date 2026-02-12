@@ -4,6 +4,7 @@
 
 - **`PLANNING.md`** — Project-level requirements, design decisions, tech stack, and task breakdown. This is the source of truth for what to build and how.
 - **`SPEC.md`** — Module or feature-level specifications, located alongside the code they describe. These are the source of truth for implementation details within that scope.
+- **`docs/avalon-rules.md`** — Avalon game rules reference for development and for players. Consult when implementing role logic, win conditions, or player counts.
 - **`.context.md`** — Conversation history and technical rationale (git-ignored, local only).
 - **`CONTRIBUTING.md`** — Workflow and branching conventions.
 
