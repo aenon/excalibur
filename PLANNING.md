@@ -198,6 +198,18 @@ The following decisions have alternatives. Each needs a resolution before or dur
 
 ---
 
+## High-Level Todos
+
+Strategic items to guide direction. Complete or update these as we go.
+
+- [ ] **Collect Avalon rules context** — Gather official or reference Avalon rules (roles, night phase, win conditions, quest sizes, etc.) into a doc (e.g. `docs/avalon-rules.md` or a section in PLANNING.md) and commit. Ensures the app and future features stay aligned with the game.
+- [ ] **Finalize design decisions** — Resolve D1–D12 in "Design Decisions to Finalize"; update task breakdown to match.
+- [ ] **Complete Phase 0** — Infrastructure and project setup (Firebase, Vue, Functions, emulators, app shell, CI/CD).
+- [ ] **Reach MVP** — Phases 1–4 done: auth, rooms, role assignment, post-game review.
+- [ ] **Polish and ship** — Phase 5; README for players; deploy and use with a real game.
+
+---
+
 ## Task Breakdown
 
 ### Phase 0: Infrastructure & Project Setup
