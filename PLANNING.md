@@ -88,14 +88,28 @@ The following decisions have alternatives. Each needs a resolution before or dur
 - **Option A — Subcollection** (`rooms/{roomId}/players/{uid}`): One doc per player. Fine-grained security rules (each player writes own doc). More Firestore reads.
 - **Option B — Array field** on room doc (`players: [{uid, displayName, joinedAt}, ...]`): Fewer reads, simpler queries, one listener. But any player mutation rewrites the whole array, harder to secure per-player writes.
 - **Recommendation**: Option B — for 5–10 players the array is simple and performant. Host is the one making most mutations anyway.
-- **Decision**: _TBD_
+- **Decision**: B. The number of players per room is capped at 10. Even with future customized rules, this is not going to exceed 12. This is really small.
 
 ### D2. Role data storage & access
 
-- **Option A — Subcollection + rules** (`rooms/{roomId}/roles/{uid}`): Each player reads their own doc via VueFire real-time binding. Clean, standard Firestore pattern.
-- **Option B — Callable Cloud Function** (`getMyRole()`): Player calls a function, gets role back. No role data in Firestore for clients to see at all. Simpler security, but no real-time binding — call once and cache.
-- **Recommendation**: Option A — fits naturally with VueFire and real-time listeners.
-- **Decision**: _TBD_
+**Goal:** Even though the game is intended for local play, we must prevent cheating via JavaScript (DevTools, console, network inspection, or modified client code). No client should ever receive another player’s role in any form the browser can read. Security is enforced server-side (Firestore rules or Cloud Functions); we do not rely on “we just don’t render it.”
+
+**Invariant:** Role assignment is always done in a **Cloud Function** (admin SDK): the function shuffles roles and writes each player’s role. No client ever receives the full mapping. The only decision is how a client obtains **their own** role.
+
+- **Option A — Subcollection + Firestore rules** (`rooms/{roomId}/roles/{uid}`):
+  - The Cloud Function writes one doc per player: `roles/{uid}` with that player’s role.
+  - **Security rules** allow read only when `request.auth.uid == uid` (and optionally when `resource.data` is the role doc under that path). So a client can read at most `rooms/{roomId}/roles/{currentUserUid}`. Any attempt to read another path (e.g. another player’s `uid`) is rejected by Firestore **server-side**; the SDK never returns that data. With correct rules, the client never receives other players’ roles.
+  - Pros: VueFire real-time binding; one listener for “my role”; simple UX. Cons: Role data exists in Firestore, so rules must be correct and narrow (no `get()` on the whole collection).
+  - **Anti-cheat:** Rules must forbid list/collection reads on `roles` (e.g. allow only single-document read where document id equals `request.auth.uid`). Then even a modified client cannot request another player’s doc successfully.
+
+- **Option B — Callable Cloud Function** (`getMyRole(roomId)`):
+  - The Cloud Function that assigns roles writes to a server-only store (e.g. Firestore with rules that block all client reads on the role collection), or the same subcollection but with **no read rules for clients**. The client never reads role data from Firestore; it calls a callable function with `roomId`, the function (using admin SDK) looks up only `rooms/{roomId}/roles/{request.auth.uid}` and returns that single role to the caller.
+  - Pros: No role data is ever exposed to the client via Firestore; the client only ever sees the one role string in the function response. Cons: No real-time binding (call once after game start and cache in memory); slightly more code.
+
+- **If roles can change during a game:** Option A supports this naturally: the backend updates the role doc and the client’s real-time listener receives the new value. Option B can support it too, but the client would need a way to know when to refetch (e.g. listen to a neutral “game state version” on the room and call `getMyRole` again when it changes, or poll). Both are viable; Option A is a better fit if we expect changeable roles.
+
+- **Recommendation**: Option A — with strict rules (single-doc read, document id == auth uid), the client never receives other roles; VueFire fits well; real-time updates are free if roles ever change. Option B is equally safe and simpler from a “no data in client-visible store” perspective if we prefer that.
+- **Decision**: A
 
 ### D3. Review phase: how to reveal all roles
 
@@ -104,6 +118,15 @@ The following decisions have alternatives. Each needs a resolution before or dur
 - **Option C — Cloud Function returns all roles**: Client calls `getReviewData()`, function returns the full list. No Firestore reads for review.
 - **Recommendation**: Option A — simplest, no duplication, leverages Firestore rules + VueFire naturally.
 - **Decision**: _TBD_
+
+**Storing and reviewing past games (after room is reset or dismissed)**
+Right now we don’t persist past games: “return to lobby” clears role data, and when a room is deleted or expires, everything is gone. To support “review past games even after the room has changed or been dismissed”:
+
+- **Option 1 — Room-scoped history:** When leaving review (return to lobby), before clearing current roles, write a snapshot to e.g. `rooms/{roomId}/pastGames/{gameId}` (timestamp, player list, role list). The room’s “past games” list is visible to anyone who can read the room. History is tied to the room: when the room is deleted or expires, that history is gone. Simple, no new top-level collection; good if we only care about history while the room still exists.
+- **Option 2 — Standalone game history:** When a game enters review (or when leaving review), write a snapshot to a top-level collection e.g. `games` or `gameResults`: `gameId`, `roomId`, `timestamp`, `hostId`, `playerIds`, `roleAssignments` (or refs). Security rules: only participants (or users who were in that room) can read. Then “past games” can be queried by room or by “games I was in”; history survives the room being dismissed or expiring. Requires retention policy (e.g. same 30 days as rooms, or longer) and a small “past games” UI (list per room or per user).
+- **Option 3 — No persistence (current):** Review is only for the current game; return to lobby clears everything. No “past games” feature. Easiest for MVP; we can add Option 1 or 2 later.
+
+For MVP we can keep Option 3 and leave “past games” as a future enhancement; if we want it in scope, Option 1 is simpler, Option 2 is better for “review games after the room is gone.”
 
 ### D4. Room creation: client-side vs. Cloud Function
 
@@ -202,7 +225,7 @@ The following decisions have alternatives. Each needs a resolution before or dur
 
 Strategic items to guide direction. Complete or update these as we go.
 
-- [ ] **Collect Avalon rules context** — Gather official or reference Avalon rules (roles, night phase, win conditions, quest sizes, etc.) into a doc (e.g. `docs/avalon-rules.md` or a section in PLANNING.md) and commit. Ensures the app and future features stay aligned with the game.
+- [x] **Collect Avalon rules context** — Gather official or reference Avalon rules (roles, night phase, win conditions, quest sizes, etc.) into a doc (e.g. `docs/avalon-rules.md` or a section in PLANNING.md) and commit. Ensures the app and future features stay aligned with the game.
 - [ ] **Finalize design decisions** — Resolve D1–D12 in "Design Decisions to Finalize"; update task breakdown to match.
 - [ ] **Complete Phase 0** — Infrastructure and project setup (Firebase, Vue, Functions, emulators, app shell, CI/CD).
 - [ ] **Reach MVP** — Phases 1–4 done: auth, rooms, role assignment, post-game review.
