@@ -1,14 +1,15 @@
-import { computed } from 'vue'
+import { computed, Ref } from 'vue'
 import { useCurrentUser } from 'vuefire'
 import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut as firebaseSignOut,
+  User,
 } from 'firebase/auth'
 import { auth } from '../firebase'
 
 export function useAuth() {
-  const currentUser = useCurrentUser()
+  const currentUser = useCurrentUser() as Ref<User | null>
   const isAuthenticated = computed(() => currentUser.value !== null && currentUser.value !== undefined)
 
   async function signInWithGoogle(): Promise<void> {
